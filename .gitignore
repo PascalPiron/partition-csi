@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+.coverage
+*.swp
+.DS_Store
+/build/
+/dist/
+*.tar.gz
+
+# Local sessions and reports
+/sessions/
+/reports/
+/tmp/

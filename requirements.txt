@@ -1,0 +1,3 @@
+numpy>=1.21
+# Optional, only for examples/intel_iwl5300_dat_example.py
+# csiread>=1.4
