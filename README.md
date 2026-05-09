@@ -133,6 +133,29 @@ The defensive countermeasure (Shield) is filed under US provisional
 patents 64/029,862 and 64/032,880 (non-provisional due 2027-04-05) and
 is a separate codebase with separate licensing.
 
+## Authorship and AI assistance
+
+This code was generated and polished with **Claude Opus 4.7** (Anthropic, 2026)
+working under the specification, architectural direction, and review of
+Pascal Piron.
+
+The mathematical pipeline (Hampel + HSR + PCA + FFT band-power) is
+standard signal-processing methodology with citations in
+`docs/THRESHOLDS.md`. The Python implementation was drafted by the
+model and corrected through iterative testing against the synthetic
+ground truth in `src/synthetic.py`. The 33 unit tests and 12
+ground-truth tests are part of this disclosure: they exist so that any
+AI-introduced bug has a chance of being caught before the code is
+trusted. Run them yourself before relying on the output.
+
+Architectural decisions, threshold choices, license selection,
+repository structure, and the artwork context are Pascal's. The model
+wrote, refactored, and tested the Python.
+
+If you find a bug, please open an issue. The fact that the code came
+through a model is not an excuse for the bug; it is a reason for
+extra vigilance from both author and user.
+
 ## Citing this work
 
 ```bibtex

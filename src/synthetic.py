@@ -42,6 +42,9 @@ Usage
         --output sessions/synthetic_test1 \\
         --bpm 75 --shield-attenuation-db 0
 
+Author: Pascal Piron.
+Generated and polished with Claude Opus 4.7 (Anthropic). See README
+for authorship details.
 License: AGPL-3.0-or-later.
 """
 import argparse

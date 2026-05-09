@@ -32,6 +32,10 @@ Usage:
     python3 src/extractor.py sessions/<session_id>/
     python3 src/extractor.py sessions/<session_id>/ --json
 
+Author: Pascal Piron.
+Generated and polished with Claude Opus 4.7 (Anthropic). See README
+for authorship details and the test suite that exists to catch any
+AI-introduced bugs.
 License: AGPL-3.0-or-later.
 """
 import argparse
