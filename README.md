@@ -69,6 +69,35 @@ docs/
 
 Full citation chain in `docs/THRESHOLDS.md`.
 
+## Known limitations
+
+**Block stationarity assumption.** The extractor takes a single FFT
+over the entire block to find the cardiac peak. This implicitly
+assumes heart rate is approximately stationary across the block.
+For brief captures (tens of seconds to ~2 minutes) on a subject at
+rest, this holds well enough. For longer captures, natural heart
+rate variability spreads spectral energy across multiple bins and
+can lower SNR rather than raise it. Empirically observed in two
+captures of the same seated subject: a 90-second block yielded
+70.2 BPM at 2.55 dB SNR; a 10-minute block of the same subject in
+the same position yielded 67.0 BPM at 1.16 dB SNR. **Longer is not
+monotonically better with this pipeline. Keep blocks short.**
+
+A sliding-window FFT with median peak across windows (per PulseFi
+and WiCG) would handle HRV. It is not implemented here. The
+single-block FFT is kept because it makes the entire spectral path
+auditable as one transform; a windowed estimator is a future
+addition that would change the math primitives.
+
+**Single-AP geometry.** The pipeline assumes one transmitter and
+one receiver, both stationary. Multi-AP fusion and receiver mobility
+are out of scope.
+
+**No respiratory-band reporting.** Respiration is a separate signal
+in 0.1-0.5 Hz that the pipeline filters out by construction. If you
+want respiratory rate, that's a different extractor; the math here
+is cardiac-only.
+
 ## Quick start
 
 ```bash
