@@ -144,3 +144,44 @@ fs can reach the chip's airtime ceiling (typically 100+ Hz). Higher fs
 gives richer harmonics and better BPM resolution; lower fs (closer to
 the 7.4 Hz floor) still works for fundamental BPM but loses harmonic
 information.
+
+## Common pitfalls
+
+### Batched per-frame timestamps (the most common recorder bug)
+
+When a recorder writes one `time.time()` per `serial.read()` (or per
+UDP recv) instead of per CSI frame, multiple frames returned in the
+same syscall share the same outer `t`. Consecutive deltas collapse to
+zero, the extractor's median-delta estimator divides by something
+tiny, and `fs` blows up to thousands of Hz. Downstream FFT bins are
+then miscomputed and BPM extraction fails or produces nonsense.
+
+The right fix is at the recorder layer: stamp each frame from the
+firmware's monotonic `timestamp_us` field, anchored to the first
+frame's wall-clock `t`. See `examples/esp32_s3_serial_recorder.py`
+for the canonical pattern.
+
+The extractor also has a defensive fallback: if more than 50% of
+consecutive outer-`t` deltas are below 1 ms (the marker of a batched
+recorder), `load_block_amplitudes` reconstructs per-frame timestamps
+from the inner `timestamp_us` field automatically. Recorders that
+already do the right thing pass through unchanged. Recorders that
+forget get auto-corrected on the read side.
+
+This fallback only fires when the inner payload includes
+`timestamp_us`. If your firmware doesn't emit that field, get the
+recorder right: don't rely on `time.time()` per `serial.read()`.
+
+### Subcarrier count drift mid-block
+
+If the firmware switches between HT20 (64 subcarriers) and HT40 (128)
+mid-capture, frames with a different `len(amplitudes)` than the first
+parsed frame are silently dropped. This is intentional: mixing them
+would corrupt the per-subcarrier Hampel filter. Pick one bandwidth at
+the firmware level and stick with it.
+
+### RSSI ignored by the extractor
+
+The `rssi` field is recorded but not used by the extraction pipeline.
+It's there for the rig's quality-checker and for human inspection of
+the capture environment. Don't expect tuning RSSI to change BPM.

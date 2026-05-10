@@ -19,7 +19,8 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 from extractor import (  # noqa: E402
     hampel, pca_fuse, band_power, cardiac_snr_db, estimate_bpm,
-    select_subcarriers, estimate_sample_rate,
+    select_subcarriers, estimate_sample_rate, load_block_amplitudes,
+    _looks_batched, _reconstruct_timestamps_from_us,
     CARDIAC_LOW_HZ, CARDIAC_HIGH_HZ, NOISE_HIGH_BAND,
 )
 
@@ -248,6 +249,70 @@ def test_estimate_sample_rate():
            "single sample returns 0")
 
 
+# ─── batched-recorder fallback ─────────────────────────────────────
+
+def test_batched_recorder_fallback():
+    section("batched-recorder fallback")
+
+    # 100 frames at true 20 Hz, but recorder batched 10 frames per
+    # read() so 10 consecutive frames share each outer t.
+    n = 100
+    fs_true = 20.0
+    inner_us = [int(i * 1e6 / fs_true) for i in range(n)]
+    batched_t = [10.0 + (i // 10) * 0.5 for i in range(n)]
+
+    expect(_looks_batched(batched_t, n),
+           "_looks_batched detects 10-frame batching")
+
+    rebuilt = _reconstruct_timestamps_from_us(batched_t, inner_us)
+    fs_rebuilt = estimate_sample_rate(np.array(rebuilt))
+    expect(abs(fs_rebuilt - fs_true) < 0.5,
+           f"reconstructed fs={fs_rebuilt:.2f} matches true {fs_true}")
+
+    # A clean recorder (per-frame t) should NOT be classified as batched.
+    clean_t = [10.0 + i / fs_true for i in range(n)]
+    expect(not _looks_batched(clean_t, n),
+           "_looks_batched leaves clean per-frame timestamps alone")
+
+    # Reconstruction with mismatched lengths returns input unchanged.
+    expect(_reconstruct_timestamps_from_us([1.0, 2.0], [100]) == [1.0, 2.0],
+           "mismatched-length input passes through")
+
+    # Reconstruction with missing inner us also passes through.
+    expect(_reconstruct_timestamps_from_us([1.0, 2.0], [100, None]) == [1.0, 2.0],
+           "None in inner_us passes through")
+
+
+def test_load_block_amplitudes_with_batched_recorder():
+    section("load_block_amplitudes auto-corrects batched recorder")
+    import json, tempfile
+
+    n = 100
+    fs_true = 20.0
+    n_sc = 64
+    amps = [0.0] * 6 + [1.0 + 0.1 * i for i in range(n_sc - 11)] + [0.0] * 5
+
+    with tempfile.TemporaryDirectory() as td:
+        p = Path(td) / "block.jsonl"
+        with p.open("w") as f:
+            f.write(json.dumps({"_meta": True, "started_at": 10.0}) + "\n")
+            for i in range(n):
+                # All frames in groups of 10 share one outer t (batched)
+                outer_t = 10.0 + (i // 10) * 0.5
+                inner_us = int(i * 1e6 / fs_true)
+                payload = json.dumps({
+                    "amplitudes": amps, "rssi": -60,
+                    "seq": i, "timestamp_us": inner_us,
+                })
+                f.write(json.dumps({"t": outer_t, "raw": payload}) + "\n")
+        ts, amp = load_block_amplitudes(p)
+        fs = estimate_sample_rate(ts)
+        expect(abs(fs - fs_true) < 0.5,
+               f"loader auto-rebuilt fs={fs:.2f} from batched recorder")
+        expect(amp.shape == (n_sc, n),
+               f"loader returned ({n_sc}, {n}) shape, got {amp.shape}")
+
+
 # ─── Run all ───────────────────────────────────────────────────────
 
 def main():
@@ -258,6 +323,8 @@ def main():
     test_estimate_bpm()
     test_select_subcarriers()
     test_estimate_sample_rate()
+    test_batched_recorder_fallback()
+    test_load_block_amplitudes_with_batched_recorder()
 
     print(f"\n  {PASSED} passed, {FAILED} failed")
     sys.exit(0 if FAILED == 0 else 1)

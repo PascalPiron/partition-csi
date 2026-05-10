@@ -71,14 +71,56 @@ HSR_TOP_K = 8
 HSR_MIN_RATIO = 0.05
 
 
+def _reconstruct_timestamps_from_us(outer_t: list, inner_us: list) -> list:
+    """Rebuild per-frame wall-clock timestamps from the firmware's monotonic
+    `timestamp_us` field, anchored to the first frame's outer `t`.
+
+    Used when the recorder batched many frames into one Python `time.time()`
+    reading (a common bug when reading ESP32 UART with `serial.read()` in
+    chunks: multiple buffered frames return together, all stamped with the
+    timestamp of the read() boundary). The inner `timestamp_us` is set on
+    the ESP32 itself per-frame and is monotonic, so we use it to redistribute
+    timestamps within each batch.
+    """
+    if len(outer_t) != len(inner_us) or len(outer_t) < 2:
+        return list(outer_t)
+    if any(u is None for u in inner_us):
+        return list(outer_t)
+    first_t = outer_t[0]
+    first_us = inner_us[0]
+    return [first_t + (u - first_us) / 1e6 for u in inner_us]
+
+
+def _looks_batched(timestamps: list, n_frames: int) -> bool:
+    """Heuristic: if more than 50% of consecutive timestamp deltas are zero
+    (or near-zero, < 1 ms), the recorder almost certainly batched frames.
+    Real per-frame ESP32 CSI deltas are tens of milliseconds.
+    """
+    if n_frames < 16:
+        return False
+    arr = np.asarray(timestamps, dtype=np.float64)
+    dt = np.diff(arr)
+    near_zero = np.sum(dt < 1e-3)
+    return near_zero > 0.5 * len(dt)
+
+
 def load_block_amplitudes(jsonl_path: Path) -> tuple[np.ndarray, np.ndarray]:
     """Load a block's frames and return (timestamps, amplitudes_matrix).
 
     amplitudes_matrix has shape (n_subcarriers, n_frames).
     Frames whose payload does not parse or does not contain 'amplitudes'
     are dropped silently (counted in the returned dict's drop count, but
-    here we just drop and return what we have)."""
-    timestamps = []
+    here we just drop and return what we have).
+
+    Defensive timestamp reconstruction: if the outer per-frame `t` values
+    look batched (>50% of consecutive deltas under 1 ms), the recorder
+    probably wrote one Python `time.time()` per `serial.read()` boundary
+    rather than per frame. In that case we rebuild per-frame timestamps
+    from the firmware's monotonic inner `timestamp_us` field. See
+    docs/CSI_FORMAT.md "Common pitfalls" for context.
+    """
+    outer_t = []
+    inner_us = []
     amp_rows = []
     n_sc = None
 
@@ -108,11 +150,17 @@ def load_block_amplitudes(jsonl_path: Path) -> tuple[np.ndarray, np.ndarray]:
             if len(amps) != n_sc:
                 # Subcarrier count change mid-block: skip frame.
                 continue
-            timestamps.append(obj.get("t", 0.0))
+            outer_t.append(obj.get("t", 0.0))
+            inner_us.append(frame.get("timestamp_us"))
             amp_rows.append(amps)
 
     if not amp_rows:
         return np.array([]), np.zeros((0, 0))
+
+    if _looks_batched(outer_t, len(amp_rows)):
+        timestamps = _reconstruct_timestamps_from_us(outer_t, inner_us)
+    else:
+        timestamps = outer_t
 
     ts = np.array(timestamps, dtype=np.float64)
     amp = np.array(amp_rows, dtype=np.float64).T  # (n_sc, n_frames)
