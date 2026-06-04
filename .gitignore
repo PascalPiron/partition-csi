@@ -6,6 +6,7 @@ __pycache__/
 .coverage
 *.swp
 .DS_Store
+._*
 /build/
 /dist/
 *.tar.gz

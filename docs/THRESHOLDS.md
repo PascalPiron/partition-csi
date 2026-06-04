@@ -134,7 +134,8 @@ documented here for users who run the comparative-evaluation flow.
 - A survey on vital signs monitoring based on Wi-Fi CSI data. PMC
   9375645 (2022). https://pmc.ncbi.nlm.nih.gov/articles/PMC9375645/
 - Adib et al., Smart Homes that Monitor Breathing and Heart Rate.
-  ACM CHI 2015. https://witrack.csail.mit.edu/vitalradio/
+  ACM CHI 2015 (Vital-Radio: FMCW radar, not commodity WiFi CSI;
+  cited as vital-sign-from-RF prior art). https://witrack.csail.mit.edu/vitalradio/
 - Wang et al., FullBreathe: Full Human Respiration Detection
   Exploiting Complementarity of CSI Phase and Amplitude of WiFi
   Signals. ACM IMWUT 2(3) (2018). doi:10.1145/3264958

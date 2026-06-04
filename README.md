@@ -140,7 +140,7 @@ what it should: refusing to commit a BPM extraction it can't trust.
 
 The artwork's runtime uses:
 - 2x ESP32-S3 boards (one access point, one CSI receiver) running custom
-  firmware in the [partition-sensing repository](TBD).
+  firmware in a companion repository (not yet public).
 - The CSI receiver UART output is bridged to UDP / .jsonl by the
   serial-to-UDP daemon in that companion repository.
 - This `partition-csi` repository consumes the .jsonl session
@@ -158,9 +158,8 @@ advantage. The pipeline here is intentionally simple and well-cited so
 that researchers, journalists, artists, and concerned citizens can run
 it, audit it, and understand what their walls already know about them.
 
-The defensive countermeasure (Shield) is filed under US provisional
-patents 64/029,862 and 64/032,880 (non-provisional due 2027-04-05) and
-is a separate codebase with separate licensing.
+The defensive countermeasure (Shield) is a separate, open-source
+project.
 
 ## Authorship and AI assistance
 
@@ -192,7 +191,7 @@ extra vigilance from both author and user.
   author = {Piron, Pascal},
   title  = {{partition-csi}: WiFi-CSI cardiac extraction},
   year   = {2026},
-  url    = {https://github.com/pascalpiron/partition-csi}
+  url    = {https://github.com/PascalPiron/partition-csi}
 }
 ```
 
@@ -207,7 +206,8 @@ data-staleness architecture).
 - Liu et al. WiFi-based Real-time Breathing and Heart Rate
   Monitoring during Sleep. arXiv 1908.05108 (2020).
 - Adib et al. Smart Homes that Monitor Breathing and Heart Rate.
-  ACM CHI 2015. https://witrack.csail.mit.edu/vitalradio/
+  ACM CHI 2015 (Vital-Radio: FMCW radar, not commodity WiFi CSI;
+  cited as vital-sign-from-RF prior art). https://witrack.csail.mit.edu/vitalradio/
 - Wang et al. FullBreathe. ACM IMWUT 2(3) (2018).
   doi:10.1145/3264958
 - Tse & Viswanath. Fundamentals of Wireless Communication.
